@@ -109,8 +109,10 @@ class GoodsCommentView(APIView):
         
         order_good.is_commented = 1
         order_good.save()
-        
-        order = order_good.order
-        order.status = OrderInfo.ORDER_STATUS_ENUM['FINISHED']
-        order.save()
+
+        count = OrderGoods.objects.filter(order_id=order_id, is_commented=False).count()
+        if count == 0:
+            order = order_good.order
+            order.status = OrderInfo.ORDER_STATUS_ENUM['FINISHED']
+            order.save()
         return Response({'message': 'ok'}, status=status.HTTP_201_CREATED)
