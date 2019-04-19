@@ -1,4 +1,3 @@
-
 from rest_framework_jwt.views import obtain_jwt_token
 from rest_framework.routers import DefaultRouter
 from . import views
@@ -23,10 +22,6 @@ urlpatterns = [
     # 客户浏览记录
     url(r'^browse_histories/$', views.UserBrowserHistoryView.as_view()),
     
-    # #######小青
-    # 获取验证码
-    # url(r'^image_codes/(.+)/$', views.ImageCodeView.as_view()),
-    # url(r'^image_codes/(?P<image_code_id>.+)/$', views.ImageCodeView.as_view()),
     # 验证用户和图片验证码
     # http://api.meiduo.site:8000/accounts/18791920371/sms/token/?text=thby&image_code_id=2b1281c2-1555-4b28-b029-cab24ea62fcf
     url(r'^accounts/(?P<username>\w{5,20})/sms/token/$', views.VerifyImageCode.as_view()),
@@ -38,9 +33,7 @@ urlpatterns = [
     url(r'^users/(?P<user_id>\d+)/password/$', views.ModifyPassword.as_view()),
     # 修改密码
     url(r'^users/(?P<user_id>\d+)/new_password/$', views.ChangePassword.as_view())
-    #   ########
 ]
-
 
 router = DefaultRouter()
 router.register(r'addresses', views.AddressViewSet, base_name='addresses')

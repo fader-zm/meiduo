@@ -26,7 +26,6 @@ from . import constants
 from celery_tasks.sms.tasks import send_sms_code
 
 
-
 class UserView(CreateAPIView):
     """用户注册 本质是新增"""
     # 指定序列化器

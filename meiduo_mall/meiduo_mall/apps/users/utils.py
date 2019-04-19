@@ -30,10 +30,11 @@ def get_user_by_account(account):
 
 class USerNameMobileAuthBacend(ModelBackend):
     """修改django的认证类  为了实现多账号登录  即号码 用户名都可以登录"""
+    
     def authenticate(self, request, username=None, password=None, **kwargs):
         # 获取user
         user = get_user_by_account(username)
         # 判断当前前端传入的密码是否正确
         if user and user.check_password(password):
-             # 返回user
+            # 返回user
             return user
