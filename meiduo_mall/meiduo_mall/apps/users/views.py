@@ -1,15 +1,19 @@
-from django.shortcuts import render
+from django.conf import settings
+from django.db.models import Q
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView, ListAPIView
+from rest_framework.generics import CreateAPIView, RetrieveAPIView, UpdateAPIView
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 from rest_framework_jwt.settings import api_settings
+from itsdangerous import TimedJSONWebSignatureSerializer as TJWSSerializer
+from random import randint
 
 from goods.serializer import SKUSerializer
-from .models import User, Address
+from utils.exceptions import logger
+from .models import User
 from .serializers import CreateUserSerializer, UserDetailSerializer, EmailSerializer, UserAddressSerializer, \
-    AddressTitleSerializer, UserBrowserHistorySerializer
+    AddressTitleSerializer, UserBrowserHistorySerializer, ModifyPasswordSerializers, ChangePasswordSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.mixins import UpdateModelMixin
@@ -18,6 +22,9 @@ from goods.models import SKU
 from rest_framework_jwt.views import ObtainJSONWebToken
 from carts.utils import merge_cart
 from datetime import datetime
+from . import constants
+from celery_tasks.sms.tasks import send_sms_code
+
 
 
 class UserView(CreateAPIView):
@@ -204,3 +211,136 @@ class UserAuthorizeView(ObtainJSONWebToken):
             return response
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# /accounts/xxxx/sms/token/ ?text= + &image_code_id='
+class VerifyImageCode(APIView):
+    """ 验证用户是否存在和验证码是否正确"""
+    
+    def get(self, request, username):
+        # 获取前端传入的参数
+        image_code = request.query_params.get("text")
+        image_code_id = request.query_params.get("image_code_id")
+        
+        # 判断用户是否存在  不存在就不修改
+        try:
+            user = User.objects.filter(Q(username=username) | Q(mobile=username)).first()
+            mobile = user.mobile
+        except:
+            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 从redis获取真是的图形验证码 进行对比
+        redis_conn = get_redis_connection("verifications")
+        # 'Image_Code_%s' % image_code_id
+        real_image_code = redis_conn.get('Image_Code_%s' % image_code_id).decode()
+        if not real_image_code:
+            return Response({"message": "验证码过期"})
+        if image_code.lower() != real_image_code.lower():
+            return Response({"message": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 生成token
+        serializer = TJWSSerializer(settings.SECRET_KEY, 300)
+        data = {"mobile": mobile}
+        token = serializer.dumps(data).decode()
+        mobile1 = mobile[0:3] + "****" + mobile[7:]
+        data = {
+            "mobile": mobile1,
+            "access_token": token
+        }
+        return Response(data)
+
+
+#  sms_codes/?access_token=
+class SendSmsCode(APIView):
+    """发送短信验证码"""
+    
+    def get(self, request):
+        # 获取前端传入的token 解析得到mobile
+        token = request.query_params.get("access_token")
+        serializer = TJWSSerializer(settings.SECRET_KEY, 300)
+        data = serializer.loads(token)
+        mobile = data.get("mobile")
+        try:
+            user = User.objects.get(mobile=mobile)
+        except:
+            return Response({"message": "用户不存在"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # 连接redis 保存验证码
+        redis_conn = get_redis_connection("verifications")
+        send_flag = redis_conn.get("send_flag_%s" % mobile)
+        if send_flag:
+            return Response({"message": "手机已经发送验证码"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 没发送过验证码,就生成验证码,并且保存验证码到redis数据库
+        real_sms_code = "%06d" % randint(0, 999999)
+        logger.info(real_sms_code)
+        
+        pl = redis_conn.pipeline()
+        pl.setex(mobile, 300, real_sms_code)
+        pl.setex("send_flag_%s" % mobile, constants.SEND_SMS_CODE_INTERVAL, 1)
+        pl.execute()
+        # 触发异步任务 发送短信
+        send_sms_code.delay(mobile, real_sms_code)
+        # 响应
+        return Response({"message": "ok"})
+
+
+# accounts/xxxx/password/token/?sms_code=xxx
+class VrerifySmsCode(APIView):
+    """验证短信短信验证码"""
+    
+    def get(self, request, username):
+        # 获取客户输入的验证码
+        sms_code = request.query_params.get("sms_code")
+        user = User.objects.filter(Q(username=username) | Q(mobile=username)).first()
+        mobile = user.mobile
+        # 获取redis数据库的真是验证码 进行比较
+        redis_conn = get_redis_connection("verifications")
+        real_sms_code = redis_conn.get(mobile)
+        if not real_sms_code:
+            return Response({"message": "短信验证码过期"})
+        if sms_code != real_sms_code.decode():
+            return Response({"message": "验证码错误"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 生成token返回给前端
+        serializer = TJWSSerializer(settings.SECRET_KEY, 300)
+        data1 = {"user_id": user.id, }
+        token = serializer.dumps(data1).decode()
+        data = {
+            "user_id": user.id,
+            "access_token": token
+        }
+        return Response(data)
+
+
+# users/'+ this.user_id +'/password/
+class ModifyPassword(APIView):
+    """修改密码"""
+    
+    def post(self, request, user_id):
+        # 获取前端在token包装的user_id
+        token = request.data.get("access_token")
+        #
+        serializer = TJWSSerializer(settings.SECRET_KEY, 300)
+        data = serializer.loads(token)
+        real_user_id = data.get("user_id")
+        
+        # 判断id是否一样
+        if int(user_id) != real_user_id:
+            return Response({"message": "用户id不一致"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        user = User.objects.get(id=user_id)
+        serializer = ModifyPasswordSerializers(user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+# /users/'+vm.user_id+'/password/
+class ChangePassword(UpdateAPIView):
+    """修改密码"""
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+    
+    def get_object(self):
+        return self.request.user

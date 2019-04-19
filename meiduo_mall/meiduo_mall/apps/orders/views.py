@@ -42,7 +42,7 @@ class OrderSettlementView(APIView):
 
 class CommitOrderView(CreateAPIView, ListAPIView):
     """保存订单"""
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     
     # 获取序列化器
     def get_serializer_class(self):

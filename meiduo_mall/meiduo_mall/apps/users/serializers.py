@@ -200,4 +200,72 @@ class SKUSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "price", "default_image_url", "comments"]
         
 
+class ModifyPasswordSerializers(serializers.ModelSerializer):
+    password2 = serializers.CharField(label="再次输入", write_only=True)
+    access_token = serializers.CharField(label="token", read_only=True)
 
+    class Meta:
+        model = User
+        fields = ['password', 'password2', 'access_token']
+        # 修改字段选项
+        extra_kwargs = {
+            "password": {
+                "write_only": True,
+                "min_length": 8,
+                "max_length": 20,
+                "error_messages": {
+                    "min_length": "仅仅允许8-20个字符长度的密码",
+                    "max_length": "仅仅允许8-20个字符长度的密码"}
+            },
+        }
+
+    def validate(self, attrs):
+        # 校验2个密码是否一致
+        if attrs["password"] != attrs["password2"]:
+            raise serializers.ValidationError("2此输入的密码不一致,重新输入")
+        return attrs
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password")
+        del validated_data["password2"]
+        instance.set_password(password)
+        instance.save()
+        return instance
+
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(label="新密码", write_only=True)
+    password2 = serializers.CharField(label="确认密码", write_only=True)
+    old_password = serializers.CharField(label="旧密码", write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['old_password', 'password', 'password2']   # 指明要进行校验或序列化的字段
+        # 修改字段选项
+        extra_kwargs = {
+            "password": {
+                "min_length": 8,
+                "max_length": 20,
+                "error_messages": {
+                    "min_length": "仅仅允许8-20个字符长度的密码",
+                    "max_length": "仅仅允许8-20个字符长度的密码"}
+            },
+        }
+
+    def validate(self, attrs):
+        # 校验2个密码是否一致
+        if attrs["password"] != attrs["password2"]:
+            raise serializers.ValidationError("2此输入的密码不一致,重新输入")
+        return attrs
+
+    def update(self, instance, validated_data):
+        old_password = validated_data.pop("old_password")
+        password = validated_data.pop("password")
+        del validated_data["password2"]
+
+        if instance.check_password(old_password) is False:
+            raise serializers.ValidationError("原密码输入错误")
+
+        instance.set_password(password)
+        instance.save()
+        return instance

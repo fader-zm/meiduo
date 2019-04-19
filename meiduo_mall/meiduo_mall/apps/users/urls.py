@@ -23,7 +23,22 @@ urlpatterns = [
     # 客户浏览记录
     url(r'^browse_histories/$', views.UserBrowserHistoryView.as_view()),
     
-
+    # #######小青
+    # 获取验证码
+    # url(r'^image_codes/(.+)/$', views.ImageCodeView.as_view()),
+    # url(r'^image_codes/(?P<image_code_id>.+)/$', views.ImageCodeView.as_view()),
+    # 验证用户和图片验证码
+    # http://api.meiduo.site:8000/accounts/18791920371/sms/token/?text=thby&image_code_id=2b1281c2-1555-4b28-b029-cab24ea62fcf
+    url(r'^accounts/(?P<username>\w{5,20})/sms/token/$', views.VerifyImageCode.as_view()),
+    # 发送短信验证码
+    url(r'^sms_codes/$', views.SendSmsCode.as_view()),
+    # 验证短信验证码
+    url(r'^accounts/(?P<username>\w{5,20})/password/token/$', views.VrerifySmsCode.as_view()),
+    # 忘记密码
+    url(r'^users/(?P<user_id>\d+)/password/$', views.ModifyPassword.as_view()),
+    # 修改密码
+    url(r'^users/(?P<user_id>\d+)/new_password/$', views.ChangePassword.as_view())
+    #   ########
 ]
 
 
