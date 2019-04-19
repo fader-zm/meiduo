@@ -16,8 +16,12 @@ Including another URLconf
 import xadmin
 from django.conf.urls import url, include
 from django.contrib import admin
+from django.views.generic.base import RedirectView
 
 urlpatterns = [
+    # 网站图标
+    url(r'^favicon.ico$', RedirectView.as_view(url='static/favicon.ico')),
+    
     # url(r'^admin/', admin.site.urls),
     url(r'xadmin/', include(xadmin.site.urls)),
     # 富文本路由
@@ -27,6 +31,7 @@ urlpatterns = [
     # 用户模块
     url(r'^', include('users.urls')),
     # qq登录
+    # http://api.meiduo.site:8000/oauth/sina/authorization/?state=/
     url(r'^oauth/', include('oauth.urls')),
     # 收货地址模块
     url(r'^', include('areas.urls')),

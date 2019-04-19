@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    
     'rest_framework',  # 注册DRF
     'corsheaders',  # 解决跨域问题
     'ckeditor',  # 富文本编辑器
@@ -54,8 +54,7 @@ INSTALLED_APPS = [
     'xadmin',  # xadmin扩展
     'crispy_forms',
     'reversion',
-
-
+    
     'users.apps.UsersConfig',  # 注册users子应用
     'oauth.apps.OauthConfig',  # QQ模块注册
     'areas.apps.AreasConfig',  # 省市区注册
@@ -171,7 +170,7 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
-
+    
     "history": {  # 存储商品浏览记录
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://127.0.0.1/3",
@@ -179,7 +178,7 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     },
-
+    
     "cart": {  # 存储登录用户购物车数据
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://127.0.0.1/4",
@@ -312,8 +311,12 @@ CRONJOBS = [
      '>> /home/python/Desktop/meiduo24/meiduo_mall/logs/crontab.log')
 ]
 
-
 # 支付宝
 ALIPAY_APPID = "2016092700604896"
 ALIPAY_URL = "https://openapi.alipaydev.com/gateway.do"
-ALIPAY_DEBUG = True   # 表示是沙箱环境(True) 还是真是环境(False)
+ALIPAY_DEBUG = True  # 表示是沙箱环境(True) 还是真是环境(False)
+
+# weibo登录参数
+WEIBO_APP_KEY = '3305669385'
+WEIBO_APP_SECRET = '74c7bea69d5fc64f5c3b80c802325276'
+WEIBO_REDIRECT_URL = 'http://www.meiduo.site:8080/sina_callback.html'
