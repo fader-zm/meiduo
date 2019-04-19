@@ -1,11 +1,13 @@
-from django.shortcuts import render
+from rest_framework import status
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import ListAPIView
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
+from orders.serializer import DetailComments
 from .models import SKU
 from .serializer import SKUSerializer
-
-from rest_framework.permissions import IsAuthenticated
+from orders.models import OrderGoods
 
 
 class SKUListView(ListAPIView):
@@ -13,7 +15,7 @@ class SKUListView(ListAPIView):
     serializer_class = SKUSerializer
     filter_backends = [OrderingFilter]
     ordering_fields = ["create_time", "price", "sales"]
-
+    
     def get_queryset(self):
         # 如果再当前视图中没有去定义get/post方法,那么就没办法用参数来接受正则组提取出来的url路径参数
         # 此时可以利用视图对象的args 或 kwargs来接收
@@ -21,25 +23,15 @@ class SKUListView(ListAPIView):
         return SKU.objects.filter(is_launched=True, category_id=category_id)
 
 
-# /orders/
-# class UserOrderView(ListAPIView):
-#     """用户订单列表获取"""
-#     # 认证用户是否登录
-#     permission_classes = [IsAuthenticated]
-    """
-    需要定义序列化器
-    前端: 订单创建时间, 订单号, 图片, 描述, 商品价格, 数据, 价格, 总金额, 支付方式, 订单状态
-    表: order_info, order_goods, sku
-    create_time, order_id, default_image_url, name, price, total_count, total_amount, freight, pay_method, status
-    """
+class SKUCommentViewSet(APIView):
+    """评论展示"""
     
-    # # 指定序列化器
-    # serializer_class = UserOrderSerializer
-    #
-    # # 指定查询集
-    # def get_queryset(self):
-    #     user = self.request.user
-    #     queryset = OrderInfo.objects.filter(user=user)
-    #     return queryset
-    
-    
+    def get(self, request, sku_id):
+        user = request.user
+        try:
+            ordergood = OrderGoods.objects.filter(sku_id=sku_id, is_commented=1)
+        except SKU.DoesNotExist:
+            return Response({'message': '商品信息有误'}, status=status.HTTP_400_BAD_REQUEST)
+        serializers = DetailComments(data=ordergood, many=True)
+        serializers.is_valid()
+        return Response(data=serializers.data, status=status.HTTP_200_OK)

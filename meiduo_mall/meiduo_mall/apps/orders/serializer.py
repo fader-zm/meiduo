@@ -6,6 +6,8 @@ from decimal import Decimal
 from django_redis import get_redis_connection
 from django.db import transaction
 
+from users.serializers import UserDetailSerializer
+
 
 class CartSKUSerializer(serializers.ModelSerializer):
     """订单中的商品序列化器"""
@@ -152,5 +154,41 @@ class UserOrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderInfo
         fields = ["order_id", "create_time", "total_amount", "freight", "pay_method", "status", "skus"]
-    
 
+
+class UncommentSerializer(serializers.ModelSerializer):
+    """商品评论序列化器"""
+    
+    comments = serializers.IntegerField(label='商品数量', min_value=1)
+    
+    class Meta:
+        model = SKU
+        fields = ['id', 'name', 'default_image_url', 'price', 'comments']
+
+
+class GoodsCommentSerializer(serializers.ModelSerializer):
+    """评论保存序列化器"""
+    order = serializers.PrimaryKeyRelatedField(label='订单编号', queryset=OrderInfo.objects.all())
+    sku = serializers.PrimaryKeyRelatedField(label='sku编号', queryset=SKU.objects.all())
+    
+    class Meta:
+        model = OrderGoods
+        fields = ['sku', 'comment', 'score', 'is_anonymous', 'order']
+
+
+class OrdersInfoDetailSerializer(serializers.ModelSerializer):
+    """评论展示序列化器1"""
+    user = UserDetailSerializer()
+    
+    class Meta:
+        model = OrderInfo
+        fields = ['order_id', 'user']
+
+
+class DetailComments(serializers.ModelSerializer):
+    """"评论展示序列化器2"""
+    order = OrdersInfoDetailSerializer()
+    
+    class Meta:
+        model = OrderGoods
+        fields = ['id', 'score', 'comment', 'order']
