@@ -223,17 +223,24 @@ var vm = new Vue({
                         this.step_class['step-3'] = false;
                         this.is_show_form_3 = false;
                         this.is_show_form_4 = true;
+
+                //         var oTime = setTimeout(function(){
+                //     console.log(444);
+                // },3000);
+                //         // 关闭执行1次定时器
+                //         clearTimeout(oTime);
+                    window.setTimeout("location.href='/login.html'",3000);
+                        // 跳转页面
+                        // var return_url = '/login.html';
+                        // location.href = return_url;
                     })
                     .catch(error => {
                         alert(error.response.data.message);
                         console.log(error.response.data);
-                    })
+                    });
+
+
             }
         }
     }
 })
-
-
-// .then(response => {
-//                     location.href = response.data.login_url;
-//                 })

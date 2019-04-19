@@ -10,7 +10,8 @@ var vm = new Vue({
         new_cpwd: '',
         error_opwd: false,
         error_pwd: false,
-        error_cpwd: false
+        error_cpwd: false,
+        error_message:''
     },
     methods: {
         // 检查旧密码
@@ -30,6 +31,8 @@ var vm = new Vue({
                 vm.error_pwd = false;
             }
         },
+
+
         // 检查确认密码
         check_cpwd: function(){
             if (vm.new_pwd != vm.new_cpwd) {
@@ -59,13 +62,21 @@ var vm = new Vue({
                     )
                     .then(function(response){
                         alert('保存成功');
+                        // 跳转页面
+                        var return_url = '/login.html';
+                        location.href = return_url;
                     })
+
                     .catch(function(error){
                         if (error.response.status === 403) {
                             location = '/index.html?next=/user_center_pass.html';
-                        } else {
-                            alert(error.response.data.message);
+                        } else if(error.response.status == 400){
+                            alert('新密码和旧密码不能一样')
                         }
+                        // #######
+                        // else {
+                        //     alert(error.response.data.message);
+                        // }
                     })
             } else {
                 location.href = '/index.html?next=/user_center_pass.html';

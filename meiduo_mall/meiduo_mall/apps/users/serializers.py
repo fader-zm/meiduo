@@ -253,6 +253,9 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         # 校验2个密码是否一致
+        if attrs["password"] == attrs["old_password"]:
+            raise serializers.ValidationError("旧密码和新密码一致, 请重新设置密码")
+        
         if attrs["password"] != attrs["password2"]:
             raise serializers.ValidationError("2此输入的密码不一致,重新输入")
         return attrs
